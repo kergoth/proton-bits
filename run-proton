@@ -1,0 +1,295 @@
+#!/bin/sh
+# TODO: split run-proton into run-proton and run-proton-steam
+# TODO: determine if I should add unixodbc. Grey Goo is complaining about it
+# TODO: improve redist exec to use the runkey registry entries
+# TODO: add argument to run the default exe for steam, by calling out to
+# SteamCMD to app_print_info to get the windows exe name
+# TODO: add an included db of preparation commands to do further prefix setup
+# for this game, i.e. winetricks, registry tweaks to be done prior to running
+# the redists
+# TODO: make cmd optional
+
+proton_version=3.7
+export PROTON_NO_ESYNC=1
+
+
+usage () {
+    echo >&2 "Usage: ${0##*/} [options] EXE_TO_RUN [ARGS...]"
+    echo >&2
+    echo >&2 "Run the specified EXE_TO_RUN under Proton."
+    echo >&2
+    echo >&2 "If an appid is specified, it'll be passed to Proton, used"
+    echo >&2 "to set the default compatdata path, and will allow EXE_TO_RUN"
+    echo >&2 "to be a path relative to the game's installdir."
+    echo >&2
+    echo >&2 "All enabled steam library folders will be checked for the game."
+    echo >&2
+    echo >&2 "Example usage:"
+    echo >&2 "  ./run-proton -a 2200 quake3.exe"
+    echo >&2 "  ./run-proton ~/Downloads/some.exe"
+    echo >&2
+    echo >&2 "Options:"
+    echo >&2 "  -C          Do not chdir to the exe location or installdir"
+    echo >&2 "  -w          Run with wine directly rather than proton, i.e. to run winecfg or regedit"
+    echo >&2 "  -i          Run any steam install scripts / redists"
+    echo >&2 "  -a APPID    Specify the Steam appid"
+    echo >&2 "  -c COMPAT_DATA_PATH     Specify a data path rather than the default"
+    echo >&2 "  -p PROTON_SCRIPT_PATH   Specify the path to the proton script"
+    echo >&2 "  -L ALTERNATE_STEAM_LIBRARY_PATH  Specify the path to a steam library to check"
+    exit 1
+}
+
+abspath () {
+    _path="$1"
+    if [ -n "${_path##/*}" ]; then
+        _path="${2:-$PWD}/$1"
+    fi
+    echo "$_path"
+}
+
+get_library_folders () {
+    if [ -n "$alternate_library" ]; then
+        echo "$alternate_library"
+    fi
+    echo "$library"
+    lf="$library/steamapps/libraryfolders.vdf"
+    if [ -e "$lf" ]; then
+        vdf-get LibraryFolders.ContentStatsID <"$lf" >/dev/null || return
+        for i in $(seq 1 20 | xargs); do
+            vdf-get "LibraryFolders.$i" <"$lf" 2>/dev/null || break
+        done
+    fi
+}
+
+which_library () {
+    get_library_folders | while read -r libdir; do
+        if [ -e "$libdir/$1" ]; then
+            echo "$libdir"
+            break
+        fi
+    done
+}
+
+locate_app_by_id () {
+    mdfind "kMDItemContentType == 'com.apple.application-bundle' && kMDItemCFBundleIdentifier == '$*'"
+}
+
+export_steam_app_vars () {
+    steamapp="$(locate_app_by_id com.valvesoftware.steam)"
+    if [ -n "$steamapp" ]; then
+        appbundle="$HOME/Library/Application Support/Steam/Steam.AppBundle"
+        export STEAM_APP_BUNDLE_PATH="$steamapp"
+        export STEAM_CLIENT_CONFIG_FILE="$appbundle/Steam/Contents/MacOS/steam.cfg"
+        export STEAM_COMPAT_CLIENT_INSTALL_PATH="$appbundle/Steam/Contents/MacOS"
+        export STEAM_DYLD_INSERT_LIBRARIES="$appbundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib:$appbundle/Steam/Contents/MacOS/steamloader.dylib"
+        export SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
+        if [ -z "$DYLD_INSERT_LIBRARIES"  ]; then
+            export DYLD_INSERT_LIBRARIES="$STEAM_DYLD_INSERT_LIBRARIES"
+        fi
+    fi
+}
+
+process_appid () {
+    game_library="$(which_library "steamapps/appmanifest_$appid.acf")"
+    if [ -z "$game_library" ]; then
+        echo >&2 "Warning: Failed to find steamapps/appmanifest_$appid.acf in your steam libraries"
+    else
+        case "$cmd" in
+            [a-zA-Z]:*)
+                ;;
+            *)
+                if [ -e "$game_library/steamapps/appmanifest_$appid.acf" ]; then
+                    installdir="$(vdf-get AppState.installdir <"$game_library/steamapps/appmanifest_$appid.acf" 2>/dev/null)"
+                    if [ -n "$installdir" ]; then
+                        installdir="$(abspath "$installdir" "$game_library/steamapps/common")"
+                        abs_cmd="$(abspath "$cmd" "$installdir")"
+                        if [ -e "$abs_cmd" ]; then
+                            cmd="$abs_cmd"
+                        fi
+                    fi
+                fi
+                ;;
+        esac
+    fi
+
+    export SteamGameId="$appid" SteamAppId="$appid"
+    if [ -z "$compat_data_path" ]; then
+        if [ -n "$game_library" ]; then
+            compat_data_path="$game_library/steamapps/compatdata/$appid" 
+        else
+            compat_data_path="$library/steamapps/compatdata/$appid" 
+        fi
+    fi
+}
+
+process_arguments () {
+    auto_chdir=1
+    direct_wine=0
+    winetricks=0
+    install_redists=0
+    appid=
+    compat_data_path=
+    proton_script_path=
+    alternate_library=
+    while getopts Cwtia:c:p:L:h opt; do
+        case "$opt" in
+            C)
+                auto_chdir=0
+                ;;
+            w)
+                direct_wine=1
+                ;;
+            t)
+                winetricks=1
+                ;;
+            i)
+                install_redists=1
+                ;;
+            a)
+                appid="$OPTARG"
+                ;;
+            c)
+                compat_data_path="$(abspath "$OPTARG")"
+                ;;
+            p)
+                proton_script_path="$(abspath "$OPTARG")"
+                if [ ! -x "$proton_script_path" ]; then
+                    echo >&2 "Error: invalid proton path for -p"
+                    echo >&2
+                    usage
+                fi
+                protondir="$(dirname "$proton_script_path")"
+                ;;
+            L)
+                alternate_library="$(abspath "$OPTARG")"
+                ;;
+            \?|h)
+                usage
+                ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    if [ -z "$appid" ]; then
+        if [ -n "$SteamGameId" ] && [ "$SteamGameId" != "0" ]; then
+            appid="$SteamGameId"
+        elif [ -n "$SteamAppId" ] && [ "$SteamAppId" != "0" ]; then
+            appid="$SteamAppId"
+        fi
+    fi
+
+    if [ $# -eq 0 ]; then
+        usage
+    fi
+}
+
+process_arguments "$@"
+shift $((OPTIND - 1))
+cmd="$1"
+shift
+
+# shellcheck disable=SC2039
+case "$OSTYPE" in
+    darwin*)
+        library=~/Library/Application\ Support/Steam
+        ;;
+    *)
+        library=~/.steam/steam
+        ;;
+esac
+
+scriptdir="$(cd "$(dirname "$0")" && pwd -P)"
+PATH="$PATH:$scriptdir/dist:$scriptdir"
+if [ -z "$proton_script_path" ]; then
+    if proton_script_path="$(which proton 2>/dev/null)" && [ ! -e "${proton_script_path%/*}/LICENSE.proton" ]; then
+        protondir="$(dirname "$proton_script_path")"
+    elif protondir="$(which_library "steamapps/common/Proton $proton_version")/steamapps/common/Proton $proton_version"; then
+        proton_script_path="$protondir/proton"
+    fi
+    if [ ! -x "$proton_script_path" ]; then
+        echo >&2 "Error locating proton, please install or specify the path with -p"
+        exit 1
+    fi
+fi
+PATH="$protondir/dist/bin:$PATH"
+
+if [ -n "$appid" ]; then
+    process_appid || exit $?
+elif [ -z "$compat_data_path" ]; then
+    compat_data_path="${XDG_DATA_HOME:-$HOME/.local/share}/proton/compatdata"
+fi
+
+mkdir -p "$compat_data_path"
+touch "$compat_data_path/pfx.lock"
+
+if [ ! -e "$protondir/dist/bin/wine" ] || [ ! -e "$compat_data_path/pfx/system.reg" ]; then
+    echo >&2 "Setting up wine prefix.."
+    STEAM_COMPAT_DATA_PATH="$compat_data_path" "$proton_script_path" >/dev/null 2>&1
+fi
+
+if [ -n "$appid" ] && [ $install_redists -eq 1 ]; then
+    # Run any install scripts. Ideally only based on the registry entries, but
+    # I don't know how to query the registry entries from non-windows context.
+    appmanifest="$game_library/steamapps/appmanifest_$appid.acf"
+    if grep -q installscripts "$appmanifest"; then
+        echo >&2 "Running any Steam install scripts / redists.."
+        WINEPREFIX="$compat_data_path/pfx" STEAM_COMPAT_DATA_PATH="$compat_data_path" wine-steam-installscript "$appmanifest" || exit $?
+    else
+        WINEPREFIX="$compat_data_path/pfx" STEAM_COMPAT_DATA_PATH="$compat_data_path" wine-steam-installscript -d "$installdir" || exit $?
+    fi
+fi
+
+if [ -n "$appid" ] && [ -d "$installdir" ]; then
+    # Work around a dll search issue, it seems some games are not correctly
+    # picking up the steam dlls despite the steam install being in the library
+    # search path
+    for dll in "$compat_data_path/pfx/drive_c/Program Files (x86)/Steam/"*.dll; do
+        if [ -e "$dll" ]; then
+            cp -av "$dll" "$installdir/"
+        fi
+    done
+
+    # By default, run from the game directory
+    if [ $auto_chdir -eq 1 ]; then
+        cd "$installdir" || exit 1
+    fi
+else
+    abs_cmd="$(abspath "$cmd")"
+    if [ -e "$abs_cmd" ]; then
+        cmd="$abs_cmd"
+    fi
+    if [ $auto_chdir -eq 1 ]; then
+        case "$cmd" in
+            [a-zA-Z]:*)
+                ;;
+            *)
+                cd "$(dirname "$cmd")"
+                ;;
+        esac
+    fi
+fi
+
+if [ $winetricks -eq 1 ]; then
+    curl -fLo "$compat_data_path/winetricks" https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
+    chmod +x "$compat_data_path/winetricks"
+    PATH="$protondir/dist/bin:$PATH" WINEPREFIX="$compat_data_path/pfx" "$compat_data_path/winetricks" "$cmd" "$@"
+else
+    case "$OSTYPE" in
+        darwin*)
+            if [ -n "$appid" ] && [ -d "$installdir" ] && [ -z "$STEAM_APP_BUNDLE_PATH" ]; then
+                echo >&2 "Running Steam.."
+                open -gb com.valvesoftware.steam
+                if [ -z "$STEAM_APP_BUNDLE_PATH" ]; then
+                    export_steam_app_vars
+                fi
+            fi
+            ;;
+    esac
+
+    echo >&2 "Running $cmd $*.."
+    if [ $direct_wine -eq 1 ]; then
+        WINEPREFIX="$compat_data_path/pfx" "$protondir/dist/bin/wine" "$cmd" "$@"
+    else
+        STEAM_COMPAT_DATA_PATH="$compat_data_path" "$proton_script_path" run "$cmd" "$@"
+    fi
+fi

@@ -1,0 +1,38 @@
+#!/bin/sh
+# Game install can be placed in Resources/Game or Resources/SteamApps as
+# a steam library.
+
+scriptdir="$(cd "$(dirname "$0")" && pwd -P)"
+contentsdir="$(dirname "$scriptdir")"
+
+protondir="$HOME/Library/Application Support/Proton/dist"
+if [ ! -d "$protondir" ]; then
+    mkdir -p "$(dirname "$protondir")"
+    cp -a "$contentsdir/Resources/Proton" "$protondir"
+fi
+
+if [ $# -eq 0 ]; then
+    exe="$(/usr/libexec/PlistBuddy -c "Print :WindowsExecutable" "$contentsdir/Info.plist")"
+    if [ -z "$exe" ]; then
+        echo >&2 "Error: no WindowsExecutable in Info.plist?"
+        exit 1
+    fi
+    if [ -d "$contentsdir/Resources/Game" ]; then
+        exe="$contentsdir/Resources/Game/$exe"
+    fi
+else
+    exe=
+fi
+
+appid="$(/usr/libexec/PlistBuddy -c "Print :AppID" "$contentsdir/Info.plist")"
+if [ -n "$appid" ]; then
+    set -- -a "$appid" -L "$contentsdir/Resources" "$@"
+else
+    set -- -c "$contentsdir/Resources/CompatData" "$@"
+fi
+
+if [ -n "$exe" ]; then
+    set -- "$@" "$exe"
+fi
+
+exec "$contentsdir/Resources/run-proton" -p "$protondir/proton" "$@"

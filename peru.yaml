@@ -1,0 +1,32 @@
+imports:
+  mac-game-tools: .
+  dotfiles: .
+
+git module steaminstall:
+  url: https://gist.github.com/90d7283524e35b493943a0e74b176b4f
+  pick: steaminstall
+  rev: 84dcaae295772f733da4514cb67a211ea5be5004
+
+git module run-proton:
+  url: https://gist.github.com/kergoth/5ad792c01fa7200e9eaaa7d920c4daf3
+  pick: run-proton
+  rev: 097f04c2522557f5cebf146e8def64b75976302a
+
+git module mac-game-tools:
+  url: https://github.com/kergoth/mac-game-tools
+  pick:
+    - get-steam-win-exe
+    - get-steam-icon
+    - wine-steam-installscript
+    - vdf-get
+    - vdf
+  rev: aac106c989d8b1863a47f8d158336019dabe0218
+
+git module dotfiles:
+  url: https://github.com/kergoth/dotfiles
+  recursive: false
+  move:
+    osx/scripts/new-app: new-app
+  pick:
+    - new-app
+  rev: e0992845ed294445c259bf9a1e0d84c75824732d
