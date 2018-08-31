@@ -1,0 +1,5 @@
+#!/bin/sh
+
+gist -u https://gist.github.com/90d7283524e35b493943a0e74b176b4f steaminstall
+gist -u https://gist.github.com/kergoth/5ad792c01fa7200e9eaaa7d920c4daf3 run-proton
+./peru reup -f
