@@ -1,5 +1,13 @@
 #!/bin/sh
 
-gist -u https://gist.github.com/90d7283524e35b493943a0e74b176b4f steaminstall
-gist -u https://gist.github.com/kergoth/5ad792c01fa7200e9eaaa7d920c4daf3 run-proton
+update_gist () {
+    if which update-gist-generic >/dev/null 2>&1; then
+        update-gist-generic "$@"
+    else
+        gist -u "$@"
+    fi
+}
+
+update_gist https://gist.github.com/kergoth/90d7283524e35b493943a0e74b176b4f steaminstall
+update_gist https://gist.github.com/kergoth/5ad792c01fa7200e9eaaa7d920c4daf3 run-proton
 ./peru reup -f

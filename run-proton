@@ -1,19 +1,9 @@
 #!/bin/sh
-# TODO: split run-proton into run-proton and run-proton-steam
-# TODO: determine if I should add unixodbc. Grey Goo is complaining about it
-# TODO: improve redist exec to use the runkey registry entries
-# TODO: add argument to run the default exe for steam, by calling out to
-# SteamCMD to app_print_info to get the windows exe name
-# TODO: add an included db of preparation commands to do further prefix setup
-# for this game, i.e. winetricks, registry tweaks to be done prior to running
-# the redists
-# TODO: make cmd optional
 
 proton_version=3.7
 export PROTON_NO_ESYNC=1
 
-
-usage () {
+usage() {
     echo >&2 "Usage: ${0##*/} [options] EXE_TO_RUN [ARGS...]"
     echo >&2
     echo >&2 "Run the specified EXE_TO_RUN under Proton."
@@ -39,7 +29,7 @@ usage () {
     exit 1
 }
 
-abspath () {
+abspath() {
     _path="$1"
     if [ -n "${_path##/*}" ]; then
         _path="${2:-$PWD}/$1"
@@ -47,7 +37,7 @@ abspath () {
     echo "$_path"
 }
 
-get_library_folders () {
+get_library_folders() {
     if [ -n "$alternate_library" ]; then
         echo "$alternate_library"
     fi
@@ -61,7 +51,7 @@ get_library_folders () {
     fi
 }
 
-which_library () {
+which_library() {
     get_library_folders | while read -r libdir; do
         if [ -e "$libdir/$1" ]; then
             echo "$libdir"
@@ -70,11 +60,11 @@ which_library () {
     done
 }
 
-locate_app_by_id () {
+locate_app_by_id() {
     mdfind "kMDItemContentType == 'com.apple.application-bundle' && kMDItemCFBundleIdentifier == '$*'"
 }
 
-export_steam_app_vars () {
+export_steam_app_vars() {
     steamapp="$(locate_app_by_id com.valvesoftware.steam)"
     if [ -n "$steamapp" ]; then
         appbundle="$HOME/Library/Application Support/Steam/Steam.AppBundle"
@@ -83,20 +73,20 @@ export_steam_app_vars () {
         export STEAM_COMPAT_CLIENT_INSTALL_PATH="$appbundle/Steam/Contents/MacOS"
         export STEAM_DYLD_INSERT_LIBRARIES="$appbundle/Steam/Contents/MacOS/gameoverlayrenderer.dylib:$appbundle/Steam/Contents/MacOS/steamloader.dylib"
         export SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD=1
-        if [ -z "$DYLD_INSERT_LIBRARIES"  ]; then
+        if [ -z "$DYLD_INSERT_LIBRARIES" ]; then
             export DYLD_INSERT_LIBRARIES="$STEAM_DYLD_INSERT_LIBRARIES"
         fi
     fi
 }
 
-process_appid () {
+process_appid() {
     game_library="$(which_library "steamapps/appmanifest_$appid.acf")"
     if [ -z "$game_library" ]; then
         echo >&2 "Warning: Failed to find steamapps/appmanifest_$appid.acf in your steam libraries"
     else
         case "$cmd" in
-            [a-zA-Z]:*)
-                ;;
+            [a-zA-Z]:*) ;;
+
             *)
                 if [ -e "$game_library/steamapps/appmanifest_$appid.acf" ]; then
                     installdir="$(vdf-get AppState.installdir <"$game_library/steamapps/appmanifest_$appid.acf" 2>/dev/null)"
@@ -115,14 +105,14 @@ process_appid () {
     export SteamGameId="$appid" SteamAppId="$appid"
     if [ -z "$compat_data_path" ]; then
         if [ -n "$game_library" ]; then
-            compat_data_path="$game_library/steamapps/compatdata/$appid" 
+            compat_data_path="$game_library/steamapps/compatdata/$appid"
         else
-            compat_data_path="$library/steamapps/compatdata/$appid" 
+            compat_data_path="$library/steamapps/compatdata/$appid"
         fi
     fi
 }
 
-process_arguments () {
+process_arguments() {
     auto_chdir=1
     direct_wine=0
     winetricks=0
@@ -163,7 +153,7 @@ process_arguments () {
             L)
                 alternate_library="$(abspath "$OPTARG")"
                 ;;
-            \?|h)
+            \? | h)
                 usage
                 ;;
         esac
@@ -199,7 +189,7 @@ case "$OSTYPE" in
 esac
 
 scriptdir="$(cd "$(dirname "$0")" && pwd -P)"
-PATH="$PATH:$scriptdir/dist:$scriptdir"
+PATH="$scriptdir/dist:$scriptdir:$PATH"
 if [ -z "$proton_script_path" ]; then
     if proton_script_path="$(which proton 2>/dev/null)" && [ ! -e "${proton_script_path%/*}/LICENSE.proton" ]; then
         protondir="$(dirname "$proton_script_path")"
@@ -260,10 +250,10 @@ else
     fi
     if [ $auto_chdir -eq 1 ]; then
         case "$cmd" in
-            [a-zA-Z]:*)
-                ;;
+            [a-zA-Z]:*) ;;
+
             *)
-                cd "$(dirname "$cmd")"
+                cd "$(dirname "$cmd")" || exit 1
                 ;;
         esac
     fi
@@ -274,6 +264,7 @@ if [ $winetricks -eq 1 ]; then
     chmod +x "$compat_data_path/winetricks"
     PATH="$protondir/dist/bin:$PATH" WINEPREFIX="$compat_data_path/pfx" "$compat_data_path/winetricks" "$cmd" "$@"
 else
+    # shellcheck disable=SC2039
     case "$OSTYPE" in
         darwin*)
             if [ -n "$appid" ] && [ -d "$installdir" ] && [ -z "$STEAM_APP_BUNDLE_PATH" ]; then
