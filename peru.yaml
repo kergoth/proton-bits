@@ -1,6 +1,9 @@
 imports:
-  mac-game-tools: .
   dotfiles: .
+  mac-game-tools: .
+  vdf: .
+  steaminstall: .
+  run-proton: .
 
 git module steaminstall:
   url: https://gist.github.com/90d7283524e35b493943a0e74b176b4f
@@ -10,6 +13,7 @@ git module steaminstall:
 git module run-proton:
   url: https://gist.github.com/kergoth/5ad792c01fa7200e9eaaa7d920c4daf3
   pick: run-proton
+  executable: run-proton
   rev: 0bb75ac83ca1572174f16a13ac9b2045756c7110
 
 git module mac-game-tools:
@@ -19,8 +23,7 @@ git module mac-game-tools:
     - get-steam-icon
     - wine-steam-installscript
     - vdf-get
-    - vdf
-  rev: 315d3e4ff030b0f5f0a8319bb7ce3fbe19e66304
+  rev: 03294d62340d43d28b233111b4009eed549be00d
 
 git module dotfiles:
   url: https://github.com/kergoth/dotfiles
@@ -30,3 +33,8 @@ git module dotfiles:
   pick:
     - new-app
   rev: e0992845ed294445c259bf9a1e0d84c75824732d
+
+git module vdf:
+  url: https://github.com/ValvePython/vdf
+  pick: vdf
+  rev: ef286162d5b66562692e7b000eb6b19137227040
