@@ -1,9 +1,11 @@
 # TODO
 
 - Create a new script to wrap app_info_print from SteamCMD, to cache the info
+- Add support to the scripts in general for 32-bit prefixes, and determine how to enable that. Ceville needs dotnet35, which is incompatible with 64-bit prefixes, and the game isn't 64-bit anyway
 
 ## wine-steam-installscript
 
+- Consider how to supply the cdkeys to the scripts to substitute %CDKEY%
 - Flesh out possible registry entry type values
 - Fix handling of encoding. Registry entries are utf-16-le, but the .vdf fails
   to parse with utf-16. Could potentially use utf-8 with surrogates, but I'm
