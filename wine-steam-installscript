@@ -97,7 +97,7 @@ def vdf_run_installscripts(appmanifest, blacklist, tricks, use_installdir):
         installdir = appmanifest
         vdffiles = installdir.rglob('*.vdf')
     else:
-        with open(appmanifest, 'r') as f:
+        with open(appmanifest, 'r', errors='replace') as f:
             parsed = vdf.load(f, mapper=VDFDict)
 
         appstate = parsed.iget('appstate')
@@ -136,7 +136,7 @@ def vdf_run_installscripts(appmanifest, blacklist, tricks, use_installdir):
 
         click.echo(f'Processing install script {vdffile}')
 
-        with open(vdffile, 'rb') as f:
+        with open(vdffile, 'r', errors='replace') as f:
             parsed = vdf.load(f, mapper=VDFDict)
 
         inst = parsed.iget('installscript')
