@@ -23,7 +23,8 @@ git module mac-game-tools:
     - get-steam-icon
     - wine-steam-installscript
     - vdf-get
-  rev: 03294d62340d43d28b233111b4009eed549be00d
+    - steam-app-info
+  rev: 07e12b19330bef781c2aec18da64fc60685a495d
 
 git module dotfiles:
   url: https://github.com/kergoth/dotfiles
@@ -32,7 +33,7 @@ git module dotfiles:
     osx/scripts/new-app: new-app
   pick:
     - new-app
-  rev: e0992845ed294445c259bf9a1e0d84c75824732d
+  rev: 132d0190486512a989cdaf4c42ac15e27b558eb5
 
 git module vdf:
   url: https://github.com/ValvePython/vdf
