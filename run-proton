@@ -224,7 +224,7 @@ if [ -n "$appid" ] && [ $install_redists -eq 1 ]; then
     if grep -q installscripts "$appmanifest"; then
         echo >&2 "Running any Steam install scripts / redists.."
         WINEPREFIX="$compat_data_path/pfx" STEAM_COMPAT_DATA_PATH="$compat_data_path" wine-steam-installscript "$appmanifest" || exit $?
-    else
+    elif [ $(find "$installdir/" -iname \*.vdf | wc -l) -ne 0 ]; then
         WINEPREFIX="$compat_data_path/pfx" STEAM_COMPAT_DATA_PATH="$compat_data_path" wine-steam-installscript -d "$installdir" || exit $?
     fi
 fi
