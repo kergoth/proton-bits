@@ -221,6 +221,8 @@ if [ -n "$appid" ] && [ $install_redists -eq 1 ]; then
     # Run any install scripts. Ideally only based on the registry entries, but
     # I don't know how to query the registry entries from non-windows context.
     appmanifest="$game_library/steamapps/appmanifest_$appid.acf"
+    # Ignore the word splitting issue, I know what wc -l returns
+    # shellcheck disable=SC2046
     if grep -q installscripts "$appmanifest"; then
         echo >&2 "Running any Steam install scripts / redists.."
         WINEPREFIX="$compat_data_path/pfx" STEAM_COMPAT_DATA_PATH="$compat_data_path" wine-steam-installscript "$appmanifest" || exit $?
