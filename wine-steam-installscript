@@ -28,7 +28,8 @@ DEFAULT_BLACKLIST = r'directx|dxsetup|vcredist|msvc'
 DEFAULT_WINETRICKS_MAP = r'dotnet.*3\.?5:dotnet35;dotnet.*4\.?0:dotnet40;dotnet.*4\.?5:dotnet45;dotnet.*2\.?0:dotnet20'
 
 
-class VDFDict(collections.OrderedDict):
+
+class VDFDict(vdf.VDFDict):
     """Dict with tweaks for vdf usage."""
 
     def iget(self, key, default=None):
