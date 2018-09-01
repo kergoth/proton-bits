@@ -3,7 +3,6 @@
 # %CDKEY% in any registry entries, so the user may have to set those manually
 # after retrieving their cd keys from Steam. Dead Space 2 is an example.
 
-import click
 import collections
 import os
 import re
@@ -12,9 +11,13 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import vdf
+
 from pathlib import Path
-from pprint import pprint
+
+sys.path.insert(0, Path(__file__).parent)
+
+import click
+import vdf
 
 
 MAX_FOLDERS = 10
