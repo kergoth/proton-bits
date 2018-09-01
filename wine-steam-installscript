@@ -85,6 +85,8 @@ def vdf_run_installscripts(appmanifest, blacklist, tricks, use_installdir):
     if tricks:
         tricks = dict(((re.compile(r, re.IGNORECASE), t.split())
                        for r, t in (entry.split(':') for entry in tricks.split(';'))))
+    else:
+        tricks = {}
 
     appmanifest = Path(appmanifest).resolve(strict=True)
     if use_installdir:
