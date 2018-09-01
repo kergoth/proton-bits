@@ -288,7 +288,8 @@ def runprocess(rp, installdir, context, blacklist, tricks):
                 command = entry.escaped_get(f'command {i}', context)
 
                 if blacklist and blacklist.search(process):
-                    click.echo(f'Skipping blacklisted runprocess {key}')
+                    click.echo(
+                        f'Skipping blacklisted runprocess {key} for {process}')
                     continue
 
                 for regex, winetricks in tricks.items():
