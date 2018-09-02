@@ -8,7 +8,7 @@ imports:
 git module steaminstall:
   url: https://gist.github.com/90d7283524e35b493943a0e74b176b4f
   pick: steaminstall
-  rev: f3e1c3945e64b916b9bd24a4e0966f7c88eb644d
+  rev: 95a86db75d638db44a422393be609f3aa11fa63e
 
 git module run-proton:
   url: https://gist.github.com/kergoth/5ad792c01fa7200e9eaaa7d920c4daf3
@@ -24,7 +24,7 @@ git module mac-game-tools:
     - wine-steam-installscript
     - vdf-get
     - steam-app-info
-  rev: de7a325af016b0ad173330c8c877e534544dba2b
+  rev: 8233e18d64ee189e70d5e2cd24dcdc9e614bdde4
 
 git module dotfiles:
   url: https://github.com/kergoth/dotfiles
