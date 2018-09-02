@@ -1,6 +1,5 @@
 # TODO
 
-- Create a new script to wrap app_info_print from SteamCMD, to cache the info
 - Add support to the scripts in general for 32-bit prefixes, and determine how to enable that. Ceville needs dotnet35, which is incompatible with 64-bit prefixes, and the game isn't 64-bit anyway
 
 ## wine-steam-installscript
