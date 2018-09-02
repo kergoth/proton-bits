@@ -93,12 +93,11 @@ process_arguments () {
     fi
 
     if [ "$platform" != "$default_platform" ] && [ $default_steamdir -eq 1 ]; then
-        echo >&2 "Error: use of default steamdir with non-default platform is unsupported"
-        return 1
+        echo >&2 "Warning: use of default steamdir with non-default platform"
     fi
 
     if [ -z "$steamdir" ]; then
-        case "$platform" in
+        case "$default_platform" in
             [lL]inux)
                 steamdir="$HOME/Steam"
                 ;;
