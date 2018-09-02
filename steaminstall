@@ -120,7 +120,7 @@ process_arguments () {
 
 get_acf () {
     # I could use the appmanifest acf for this, but it lacks oslist, etc
-    steamcmd +app_info_print "$1" +quit
+    steam-app-info "$1"
 }
 
 acf_get_var () {
