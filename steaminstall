@@ -184,12 +184,11 @@ game_install_forced () {
     if [ -e "$steamapps/appmanifest_$1.acf" ]; then
         cp "$steamapps/appmanifest_$1.acf" "$2/steamapps"
     fi
+    ln -s ../../downloading "$2/steamapps/downloading"
     ret=0
-	ls "$2/steamapps"
     game_install "$1" +force_install_dir "$2" || ret=$?
-    if [ $ret -eq 0 ]; then
-		cp -a "$2/steamapps/"* "$steamapps/"
-    fi
+    rm -f "$2/steamapps/downloading"
+    cp -a "$2/steamapps/"* "$steamapps/" || :
     rm -rf "$2/steamapps"
     rmdir "$2" 2>/dev/null || :
     return $ret
