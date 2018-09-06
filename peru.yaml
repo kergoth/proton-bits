@@ -8,7 +8,7 @@ imports:
 git module steaminstall:
   url: https://gist.github.com/90d7283524e35b493943a0e74b176b4f
   pick: steaminstall
-  rev: 95a86db75d638db44a422393be609f3aa11fa63e
+  rev: 4dd629cc69ea5c51fcef4f867e1caf073be89f7c
 
 git module run-proton:
   url: https://gist.github.com/kergoth/5ad792c01fa7200e9eaaa7d920c4daf3
@@ -33,7 +33,7 @@ git module dotfiles:
     osx/scripts/new-app: new-app
   pick:
     - new-app
-  rev: 132d0190486512a989cdaf4c42ac15e27b558eb5
+  rev: f68501a58a0a1dd546aeb74795fe0ed3050bb59b
 
 git module vdf:
   url: https://github.com/ValvePython/vdf
