@@ -40,7 +40,8 @@ if [ ! -e "$contentsdir/Resources/CompatData/initialized" ]; then
 fi
 
 if [ -n "$exe" ]; then
-    set -- "$@" "$exe"
+    args="$(/usr/libexec/PlistBuddy -c "Print :WindowsArguments" "$contentsdir/Info.plist" 2>/dev/null)"
+    set -- "$@" "$exe" $args
 fi
 
 exec "$contentsdir/Resources/run-proton" -p "$protondir/proton" "$@"
