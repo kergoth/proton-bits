@@ -197,7 +197,9 @@ game_install_forced () {
 
 list_appids () {
 	(
-		echo "$@" | tr ' ' '\n'
+        if [ $# -gt 0 ]; then
+            echo "$@" | tr ' ' '\n'
+        fi
 		if [ -d "$steamapps" ]; then
 			find "$steamapps" -maxdepth 1 -type f -name appmanifest_\*.acf 2>/dev/null | sed 's,.*appmanifest_,,; s,\.acf$,,'
 		fi
