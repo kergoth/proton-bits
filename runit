@@ -27,6 +27,9 @@ fi
 appid="$(/usr/libexec/PlistBuddy -c "Print :AppID" "$contentsdir/Info.plist")"
 if [ -n "$appid" ]; then
     set -- -a "$appid" -L "$contentsdir/Resources" "$@"
+    if [ ! -h "$contentsdir/Resources/CompatData" ]; then
+        ln -s "SteamApps/compatdata/$appid" CompatData
+    fi
 else
     set -- -c "$contentsdir/Resources/CompatData" "$@"
 fi
