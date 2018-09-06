@@ -34,6 +34,11 @@ else
     set -- -c "$contentsdir/Resources/CompatData" "$@"
 fi
 
+if [ ! -e "$contentsdir/Resources/CompatData/initialized" ]; then
+    set -- -i "$@"
+    "$contentsdir/Resources/run-proton" -p "$protondir/proton" -i -w reg query HKEY_LOCAL_MACHINE >/dev/null && touch "$contentsdir/Resources/CompatData/initialized"
+fi
+
 if [ -n "$exe" ]; then
     set -- "$@" "$exe"
 fi
