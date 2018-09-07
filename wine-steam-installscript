@@ -150,10 +150,6 @@ def vdf_run_installscripts(appmanifest, blacklist, tricks, use_installdir):
         if not inst:
             continue
 
-        rp = inst.iget('run process')
-        if rp:
-            runprocess(rp, installdir, context, blacklist, tricks)
-
         reg = inst.iget('registry')
         if reg:
             registry(reg, installdir, context)
@@ -161,6 +157,10 @@ def vdf_run_installscripts(appmanifest, blacklist, tricks, use_installdir):
         cf = inst.iget('copy folders')
         if cf:
             copyfolders(cf, installdir, context)
+
+        rp = inst.iget('run process')
+        if rp:
+            runprocess(rp, installdir, context, blacklist, tricks)
 
 
 def wine(cmd, **kwargs):
