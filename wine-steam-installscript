@@ -90,6 +90,20 @@ class ProcessError(Exception):
 @click.option('-t', '--tricks', help='Map of regex patterns to winetricks to install. Checked against installscript path, registry runkey, and the process and arguments.', default=DEFAULT_WINETRICKS_MAP)
 @click.option('-d/-D', '--use-installdir/--no-use-installdir', help='Specify an installdir rather than an appmanifest. In this case all .vdf files in the installdir are processed.')
 @click.argument('appmanifest', nargs=1, required=True)
+def cmd_run_installscripts(appmanifest, blacklist, tricks, use_installdir):
+    click.echo('Starting wineserver')
+    subprocess.run(['wineserver', '-p'])
+    try:
+        click.echo('Running scripts')
+        vdf_run_installscripts(appmanifest, blacklist, tricks, use_installdir)
+    except ProcessError as exc:
+        sys.stderr.write(str(exc) + '\n')
+        sys.exit(1)
+    finally:
+        click.echo('Cleaning up wineserver')
+        subprocess.run(['wineserver', '-k'])
+        subprocess.run(['wineserver', '-w'])
+
 def vdf_run_installscripts(appmanifest, blacklist, tricks, use_installdir):
     if blacklist:
         blacklist = re.compile(blacklist, re.IGNORECASE)
@@ -364,15 +378,4 @@ def run_cmd_main(cmd):
 
 
 if __name__ == '__main__':
-    click.echo('Starting wineserver')
-    subprocess.run(['wineserver', '-p'])
-    try:
-        click.echo('Running scripts')
-        run_cmd_main(vdf_run_installscripts)
-    except ProcessError as exc:
-        sys.stderr.write(str(exc) + '\n')
-        sys.exit(1)
-    finally:
-        click.echo('Cleaning up wineserver')
-        subprocess.run(['wineserver', '-k'])
-        subprocess.run(['wineserver', '-w'])
+    run_cmd_main(cmd_run_installscripts)

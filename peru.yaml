@@ -24,7 +24,7 @@ git module mac-game-tools:
     - wine-steam-installscript
     - vdf-get
     - steam-app-info
-  rev: 8233e18d64ee189e70d5e2cd24dcdc9e614bdde4
+  rev: 34bec7bfe392e126974c7501c5c70fa5abec8f46
 
 git module dotfiles:
   url: https://github.com/kergoth/dotfiles
