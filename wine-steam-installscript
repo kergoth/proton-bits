@@ -72,8 +72,15 @@ class ProcessError(Exception):
             if (not self.error.stderr and not self.error.stdout) or not self.error.returncode or self.error.returncode < 0:
                 return str(self.error)
             else:
-                return "Command '%s' returned non-zero exit status %d:\n%s\n%s" % (
-                    self.cmd, self.error.returncode, self.error.stderr, self.error.stdout.decode('utf-8', errors='replace'))
+                decoded_out = self.error.stdout.decode(
+                    'utf-8', errors='replace')
+                indented_out = ''.join(
+                    '  ' + l for l in decoded_out.splitlines(keepends=True))
+                decoded_err = self.error.stderr.decode(
+                    'utf-8', errors='replace')
+                indented_err = ''.join(
+                    '  ' + l for l in decoded_err.splitlines(keepends=True))
+                return "Command '%s' returned non-zero exit status %d:\n%s\n%s" % (self.cmd, self.error.returncode, indented_err, indented_out)
         else:
             return "Command '%s' failed: %s" % (self.cmd, self.error)
 
