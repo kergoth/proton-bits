@@ -80,9 +80,9 @@ class ProcessError(Exception):
                     'utf-8', errors='replace')
                 indented_err = ''.join(
                     '  ' + l for l in decoded_err.splitlines(keepends=True))
-                return "Command '%s' returned non-zero exit status %d:\n%s\n%s" % (self.cmd, self.error.returncode, indented_err, indented_out)
+                return f"Command '{self.cmd}' returned non-zero exit status {self.error.returncode}:\n{indented_err}\n{indented_out}'"
         else:
-            return "Command '%s' failed: %s" % (self.cmd, self.error)
+            return f"Command '{self.cmd}' failed: {self.error}"
 
 
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
