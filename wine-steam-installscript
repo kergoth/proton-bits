@@ -355,7 +355,7 @@ def run_cmd_main(cmd):
         if exc.ctx:
             color = exc.ctx.color
             click.echo(exc.ctx.get_help() + '\n', file=sys.stderr, color=color)
-        click.echo('Error: %s' % exc.format_message(), file=sys.stderr,
+        click.echo(f'Error: {exc.format_message()}', file=sys.stderr,
                    color=color)
         sys.exit(exc.exit_code)
     except click.ClickException as exc:
