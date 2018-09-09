@@ -1,0 +1,185 @@
+#!/bin/sh
+
+proton_version=3.7
+# esync is unsupported on osx at this time. From the esync readme:
+#   The whole patchset only works on Linux, where eventfd is available. However,
+#   it should be possible to make it work on a Mac, since eventfd is just a
+#   quicker, easier way to use pipes (i.e. instead of writing 1 to the fd you'd
+#   write 1 byte; instead of reading a 64-bit value from the fd you'd read as
+#   many bytes as you can carry, which is admittedly less than 2**64 but
+#   can probably be something reasonable.) It's also possible, although I
+#   haven't yet looked, to use some different kind of synchronization
+#   primitives, but pipes would be easiest to tack onto this framework.
+# shellcheck disable=SC2039
+case "$OSTYPE" in
+    darwin*)
+        export PROTON_NO_ESYNC=1
+        ;;
+esac
+
+usage() {
+    echo >&2 "Usage: ${0##*/} [options] [EXE_TO_RUN [ARGS...]]"
+    echo >&2
+    echo >&2 "Run the specified EXE_TO_RUN under Proton. If exe is unspecified,"
+    echo >&2 "the wine prefix is initialized only."
+    echo >&2
+    echo >&2 "Options:"
+    echo >&2 "  -C          Do not chdir to the exe location"
+    echo >&2 "  -d          Run the specified command directly, in proton context, not with proton, i.e. to run 'wine winecfg' or 'winetricks dotnet40'"
+    echo >&2 "  -w          Run with wine directly rather than proton, i.e. to run winecfg or regedit"
+    echo >&2 "  -c COMPAT_DATA_PATH     Specify a data path rather than the default"
+    echo >&2 "  -p PROTON_SCRIPT_PATH   Specify the path to the proton script"
+    echo >&2 "  -L ALTERNATE_STEAM_LIBRARY_PATH  Specify the path to a steam library. Used to determine the default proton script path"
+    exit 1
+}
+
+abspath() {
+    _path="$1"
+    if [ -n "${_path##/*}" ]; then
+        _path="${2:-$PWD}/$1"
+    fi
+    echo "$_path"
+}
+
+process_arguments() {
+    auto_chdir=1
+    direct=0
+    compat_data_path=
+    proton_script_path=
+    alternate_library=
+    while getopts Cdc:p:L:h opt; do
+        case "$opt" in
+            C)
+                auto_chdir=0
+                ;;
+            d)
+                direct=1
+                ;;
+            c)
+                compat_data_path="$(abspath "$OPTARG")"
+                ;;
+            p)
+                proton_script_path="$(abspath "$OPTARG")"
+                if [ ! -x "$proton_script_path" ]; then
+                    echo >&2 "Error: invalid proton path for -p"
+                    echo >&2
+                    usage
+                fi
+                protondir="$(dirname "$proton_script_path")"
+                ;;
+            L)
+                alternate_library="$(abspath "$OPTARG")"
+                ;;
+            \? | h)
+                usage
+                ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+}
+
+get_library_folders() {
+    if [ -n "$alternate_library" ]; then
+        echo "$alternate_library"
+    fi
+    echo "$library"
+    steamappsdir="$(find "$library" -mindepth 1 -maxdepth 1 -iname steamapps | head -n 1)"
+    if [ -z "$steamappsdir" ]; then
+        steamappsdir="$library/steamapps"
+    fi
+    lf="$steamappsdir/libraryfolders.vdf"
+    if [ -e "$lf" ]; then
+        vdf-get LibraryFolders.ContentStatsID <"$lf" >/dev/null || return
+        for i in $(seq 1 20 | xargs); do
+            vdf-get "LibraryFolders.$i" <"$lf" 2>/dev/null || break
+        done
+    fi
+}
+
+which_library() {
+    get_library_folders | while read -r libdir; do
+        if [ -e "$libdir/$1" ]; then
+            echo "$libdir"
+            break
+        fi
+    done
+}
+
+process_arguments "$@"
+shift $((OPTIND - 1))
+
+if [ $# -gt 0 ]; then
+    cmd="$1"
+    shift
+    abs_cmd="$(abspath "$cmd")"
+    if [ -e "$abs_cmd" ]; then
+        cmd="$abs_cmd"
+    fi
+else
+    cmd=
+fi
+
+# shellcheck disable=SC2039
+case "$OSTYPE" in
+    darwin*)
+        library=~/Library/Application\ Support/Steam
+        ;;
+    *)
+        library=~/.steam/steam
+        ;;
+esac
+
+scriptdir="$(cd "$(dirname "$0")" && pwd -P)"
+PATH="$scriptdir/dist:$scriptdir:$PATH"
+if [ -z "$proton_script_path" ]; then
+    if proton_script_path="$(which proton 2>/dev/null)" && [ ! -e "${proton_script_path%/*}/LICENSE.proton" ]; then
+        protondir="$(dirname "$proton_script_path")"
+    elif protondir="$(which_library "steamapps/common/Proton $proton_version")/steamapps/common/Proton $proton_version"; then
+        proton_script_path="$protondir/proton"
+    fi
+    if [ ! -x "$proton_script_path" ]; then
+        echo >&2 "Error locating proton, please install or specify the path with -p"
+        exit 1
+    fi
+fi
+if [ -z "$compat_data_path" ]; then
+    compat_data_path="${XDG_DATA_HOME:-$HOME/.local/share}/proton/compatdata"
+    echo >&2 "Warning: using default compat_data_path $compat_data_path. Use -c to specify."
+fi
+
+PATH="$protondir/dist/bin:$protondir:$PATH"
+STEAM_COMPAT_DATA_PATH="$compat_data_path"
+WINEPREFIX="$compat_data_path/pfx"
+export STEAM_COMPAT_DATA_PATH WINEPREFIX
+
+trap "wineserver -w" EXIT INT TERM
+
+mkdir -p "$compat_data_path"
+touch "$compat_data_path/pfx.lock"
+
+if [ $direct -eq 1 ] || [ -z "$cmd" ]; then
+    if [ ! -e "$protondir/dist/bin/wine64" ] || [ ! -e "$compat_data_path/pfx/system.reg" ]; then
+        "$proton_script_path" >/dev/null 2>&1
+    fi
+fi
+
+if [ -n "$cmd" ]; then
+    if [ $auto_chdir -eq 1 ]; then
+        case "$cmd" in
+            [a-zA-Z]:*) ;;
+            *)
+                if [ -e "$cmd" ]; then
+                    cd "$(dirname "$cmd")" || exit 1
+                fi
+                ;;
+        esac
+    fi
+
+    if [ $direct -eq 1 ]; then
+        echo >&2 "Running $cmd $*.."
+        "$cmd" "$@"
+    else
+        echo >&2 "Running $cmd $* under proton.."
+        "$proton_script_path" run "$cmd" "$@"
+    fi
+fi
