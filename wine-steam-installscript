@@ -3,6 +3,7 @@
 # %CDKEY% in any registry entries, so the user may have to set those manually
 # after retrieving their cd keys from Steam. Dead Space 2 is an example.
 
+import collections
 import os
 import re
 import shlex
@@ -10,7 +11,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
+
 from pathlib import Path
+
+sys.path.insert(0, Path(__file__).parent)
 
 import click
 import vdf
@@ -354,13 +358,9 @@ def runprocess(rp, installdir, context, blacklist, tricks):
                             raise
 
             if hasrunkey:
-                setrunkey(hasrunkey, key)
-
-
-def setrunkey(keyname, keyname, data='1', type='REG_DWORD'):
-    wine(['reg', 'delete', keyname, '/v', keyname, '/f'], check=False)
-    wine(['reg', 'add', keyname, '/v', keyname,
-          '/t', type, '/d', data, '/f'])
+                wine(['reg', 'delete', hasrunkey, '/v', key, '/f'], check=False)
+                wine(['reg', 'add', hasrunkey, '/v', key,
+                      '/t', 'REG_DWORD', '/d', '1', '/f'])
 
 
 def run_cmd_main(cmd):

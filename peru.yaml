@@ -34,7 +34,7 @@ git module dotfiles:
     osx/scripts/new-app: new-app
   pick:
     - new-app
-  rev: c0f6a6bde278e9865030cbbfde6fff5db01d1f91
+  rev: a6e760ad6c4d7721ff0d45a76b21f0615e486651
 
 git module vdf:
   url: https://github.com/ValvePython/vdf
