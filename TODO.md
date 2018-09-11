@@ -4,7 +4,6 @@
 
 ## wine-steam-installscript
 
-- Consider how to supply the cdkeys to the scripts to substitute %CDKEY%
 - Flesh out possible registry entry type values
 - Fix handling of encoding. Registry entries are utf-16-le, but the .vdf fails to parse with utf-16. Could potentially use utf-8 with surrogates, but I'm not very familiar with how that works.
 
