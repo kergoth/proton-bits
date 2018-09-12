@@ -21,4 +21,5 @@ if [ ! -e "$state_dir" ]; then
     done
 fi
 
+PATH=~/.local/bin:"$PATH"
 peru --state-dir="$state_dir" "$@"
