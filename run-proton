@@ -214,8 +214,14 @@ if [ ! -e "$protondir/dist/bin/wine" ] || [ ! -e "$compat_data_path/pfx/system.r
 fi
 
 if [ -n "$appid" ]; then
-    ln -sf ../../../.. "$compat_data_path/pfx/drive_y"
-    ln -sf ../drive_y "$compat_data_path/pfx/dosdevices/y:"
+    if [ ! -e "$compat_data_path/pfx/drive_y" ] || [ "$(readlink "$compat_data_path/pfx/drive_y")" != "../../../.." ]; then
+        rm -f "$compat_data_path/pfx/drive_y"
+        ln -s ../../../.. "$compat_data_path/pfx/drive_y"
+    fi
+    if [ ! -e "$compat_data_path/pfx/dosdevices/y:" ] || [ "$(readlink "$compat_data_path/pfx/dosdevices/y:")" != "../drive_y" ]; then
+        rm -f "$compat_data_path/pfx/dosdevices/y:"
+        ln -s ../drive_y "$compat_data_path/pfx/dosdevices/y:"
+    fi
     if [ $install_redists -eq 1 ]; then
         # Run any install scripts. Ideally only based on the registry entries, but
         # I don't know how to query the registry entries from non-windows context.
