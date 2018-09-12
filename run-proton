@@ -91,16 +91,6 @@ process_appid() {
         if [ -n "$installdir" ]; then
             installdir="$(abspath "$installdir" "$game_library/steamapps/common")"
         fi
-        case "$cmd" in
-            [a-zA-Z]:*) ;;
-
-            *)
-                abs_cmd="$(abspath "$cmd" "$installdir")"
-                if [ -e "$abs_cmd" ]; then
-                    cmd="$abs_cmd"
-                fi
-                ;;
-        esac
     fi
 
     export SteamGameId="$appid" SteamAppId="$appid"
@@ -208,6 +198,7 @@ if [ -z "$proton_script_path" ]; then
 fi
 PATH="$protondir/dist/bin:$PATH"
 
+installdir=
 if [ -n "$appid" ]; then
     process_appid || exit $?
 elif [ -z "$compat_data_path" ]; then
@@ -222,18 +213,22 @@ if [ ! -e "$protondir/dist/bin/wine" ] || [ ! -e "$compat_data_path/pfx/system.r
     STEAM_COMPAT_DATA_PATH="$compat_data_path" "$proton_script_path" >/dev/null 2>&1
 fi
 
-if [ -n "$appid" ] && [ $install_redists -eq 1 ]; then
-    # Run any install scripts. Ideally only based on the registry entries, but
-    # I don't know how to query the registry entries from non-windows context.
-    appmanifest="$game_library/steamapps/appmanifest_$appid.acf"
-    # Ignore the word splitting issue, I know what wc -l returns
-    # shellcheck disable=SC2046
-    if grep -q installscripts "$appmanifest"; then
-        echo >&2 "Running any Steam install scripts / redists.."
-        WINEPREFIX="$compat_data_path/pfx" STEAM_COMPAT_DATA_PATH="$compat_data_path" wine-steam-installscript "$appmanifest" || exit $?
-    elif [ $(find "$installdir/" -iname \*.vdf | wc -l) -ne 0 ]; then
-        echo >&2 "Running any Steam install scripts / redists.."
-        WINEPREFIX="$compat_data_path/pfx" STEAM_COMPAT_DATA_PATH="$compat_data_path" wine-steam-installscript -d "$installdir" || exit $?
+if [ -n "$appid" ]; then
+    ln -sf ../../../.. "$compat_data_path/pfx/drive_y"
+    ln -sf ../drive_y "$compat_data_path/pfx/dosdevices/y:"
+    if [ $install_redists -eq 1 ]; then
+        # Run any install scripts. Ideally only based on the registry entries, but
+        # I don't know how to query the registry entries from non-windows context.
+        appmanifest="$game_library/steamapps/appmanifest_$appid.acf"
+        # Ignore the word splitting issue, I know what wc -l returns
+        # shellcheck disable=SC2046
+        if grep -q installscripts "$appmanifest"; then
+            echo >&2 "Running any Steam install scripts / redists.."
+            WINEPREFIX="$compat_data_path/pfx" STEAM_COMPAT_DATA_PATH="$compat_data_path" wine-steam-installscript -L 'y:\' "$appmanifest" || exit $?
+        elif [ -n "$installdir" ] && [ $(find "$installdir/" -iname \*.vdf | wc -l) -ne 0 ]; then
+            echo >&2 "Running any Steam install scripts / redists.."
+            WINEPREFIX="$compat_data_path/pfx" STEAM_COMPAT_DATA_PATH="$compat_data_path" wine-steam-installscript -L 'y:\' -d "$installdir" || exit $?
+        fi
     fi
 fi
 
@@ -249,13 +244,17 @@ if [ -n "$appid" ] && [ -d "$installdir" ]; then
 
     # By default, run from the game directory
     if [ $auto_chdir -eq 1 ]; then
-        cd "$installdir" || exit 1
+        cd "$compat_data_path/pfx/drive_y/steamapps/common/${installdir##*/}" || exit 1
+    elif [ -n "$installdir" ]; then
+        case "$cmd" in
+            [a-zA-Z]:*) ;;
+            /*) ;;
+            *)
+                cmd="d:/steamapps/common/${installdir##*/}/$cmd"
+                ;;
+        esac
     fi
 else
-    abs_cmd="$(abspath "$cmd")"
-    if [ -e "$abs_cmd" ]; then
-        cmd="$abs_cmd"
-    fi
     if [ $auto_chdir -eq 1 ]; then
         case "$cmd" in
             [a-zA-Z]:*) ;;
@@ -264,6 +263,11 @@ else
                 cd "$(dirname "$cmd")" || exit 1
                 ;;
         esac
+    else
+        abs_cmd="$(abspath "$cmd")"
+        if [ -e "$abs_cmd" ]; then
+            cmd="$abs_cmd"
+        fi
     fi
 fi
 
