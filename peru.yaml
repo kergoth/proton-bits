@@ -14,7 +14,7 @@ git module run-proton:
   url: https://gist.github.com/kergoth/5ad792c01fa7200e9eaaa7d920c4daf3
   pick: run-proton
   executable: run-proton
-  rev: 0bb75ac83ca1572174f16a13ac9b2045756c7110
+  rev: d116ca87f42c6abf7d4d79889ae834dcae7a3521
 
 git module mac-game-tools:
   url: https://github.com/kergoth/mac-game-tools
@@ -25,7 +25,7 @@ git module mac-game-tools:
     - wine-steam-installscript
     - vdf-get
     - steam-app-info
-  rev: 4b4de41bdfcccdb5357428758bbe38028c4ebd49
+  rev: 91e40ad558c838699a160e77d0536b66d4ed4f22
 
 git module dotfiles:
   url: https://github.com/kergoth/dotfiles
@@ -34,7 +34,7 @@ git module dotfiles:
     osx/scripts/new-app: new-app
   pick:
     - new-app
-  rev: a6e760ad6c4d7721ff0d45a76b21f0615e486651
+  rev: 3dd0495e4430181f45ef650f3231f0d73cfa5447
 
 git module vdf:
   url: https://github.com/ValvePython/vdf

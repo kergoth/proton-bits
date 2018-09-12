@@ -1,6 +1,5 @@
 #!/bin/sh
 
-proton_version=3.7
 export PROTON_NO_ESYNC=1
 
 usage() {
@@ -22,6 +21,7 @@ usage() {
     echo >&2 "  -C          Do not chdir to the exe location or installdir"
     echo >&2 "  -w          Run with wine directly rather than proton, i.e. to run winecfg or regedit"
     echo >&2 "  -i          Run any steam install scripts / redists"
+    echo >&2 "  -v VERSION  Specify proton version (Default: 3.7). This is only used without -p."
     echo >&2 "  -a APPID    Specify the Steam appid"
     echo >&2 "  -c COMPAT_DATA_PATH     Specify a data path rather than the default"
     echo >&2 "  -p PROTON_SCRIPT_PATH   Specify the path to the proton script"
@@ -66,7 +66,10 @@ locate_app_by_id() {
 
 export_steam_app_vars() {
     steamapp="$(locate_app_by_id com.valvesoftware.steam)"
-    if [ -n "$steamapp" ]; then
+    if [ -z "$steamapp" ]; then
+        steamapp="/Applications/Steam.app"
+    fi
+    if [ -d "$steamapp" ]; then
         appbundle="$HOME/Library/Application Support/Steam/Steam.AppBundle"
         export STEAM_APP_BUNDLE_PATH="$steamapp"
         export STEAM_CLIENT_CONFIG_FILE="$appbundle/Steam/Contents/MacOS/steam.cfg"
@@ -84,19 +87,17 @@ process_appid() {
     if [ -z "$game_library" ]; then
         echo >&2 "Warning: Failed to find steamapps/appmanifest_$appid.acf in your steam libraries"
     else
+        installdir="$(vdf-get AppState.installdir <"$game_library/steamapps/appmanifest_$appid.acf")" || return 1
+        if [ -n "$installdir" ]; then
+            installdir="$(abspath "$installdir" "$game_library/steamapps/common")"
+        fi
         case "$cmd" in
             [a-zA-Z]:*) ;;
 
             *)
-                if [ -e "$game_library/steamapps/appmanifest_$appid.acf" ]; then
-                    installdir="$(vdf-get AppState.installdir <"$game_library/steamapps/appmanifest_$appid.acf" 2>/dev/null)"
-                    if [ -n "$installdir" ]; then
-                        installdir="$(abspath "$installdir" "$game_library/steamapps/common")"
-                        abs_cmd="$(abspath "$cmd" "$installdir")"
-                        if [ -e "$abs_cmd" ]; then
-                            cmd="$abs_cmd"
-                        fi
-                    fi
+                abs_cmd="$(abspath "$cmd" "$installdir")"
+                if [ -e "$abs_cmd" ]; then
+                    cmd="$abs_cmd"
                 fi
                 ;;
         esac
@@ -117,11 +118,12 @@ process_arguments() {
     direct_wine=0
     winetricks=0
     install_redists=0
+    proton_version=3.7
     appid=
     compat_data_path=
     proton_script_path=
     alternate_library=
-    while getopts Cwtia:c:p:L:h opt; do
+    while getopts Cwtiv:a:c:p:L:h opt; do
         case "$opt" in
             C)
                 auto_chdir=0
@@ -134,6 +136,9 @@ process_arguments() {
                 ;;
             i)
                 install_redists=1
+                ;;
+            v)
+                proton_version="$OPTARG"
                 ;;
             a)
                 appid="$OPTARG"
@@ -227,6 +232,7 @@ if [ -n "$appid" ] && [ $install_redists -eq 1 ]; then
         echo >&2 "Running any Steam install scripts / redists.."
         WINEPREFIX="$compat_data_path/pfx" STEAM_COMPAT_DATA_PATH="$compat_data_path" wine-steam-installscript "$appmanifest" || exit $?
     elif [ $(find "$installdir/" -iname \*.vdf | wc -l) -ne 0 ]; then
+        echo >&2 "Running any Steam install scripts / redists.."
         WINEPREFIX="$compat_data_path/pfx" STEAM_COMPAT_DATA_PATH="$compat_data_path" wine-steam-installscript -d "$installdir" || exit $?
     fi
 fi

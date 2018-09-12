@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import collections
 import os
 import re
 import shlex
@@ -8,20 +7,19 @@ import shutil
 import subprocess
 import sys
 import tempfile
-
 from pathlib import Path
 
-sys.path.insert(0, Path(__file__).parent)
-
 import click
+import toml
 import vdf
 
 
 MAX_FOLDERS = 10
 MAX_PROCS = 10
 # directx is rarely a good idea, vcredists usually aren't needed, and when they
-# are, they should be winetricks, and dotnet needs winetricks
-DEFAULT_BLACKLIST = r'directx|dxsetup|vcredist|msvc|amdcpu'
+# are, they should be winetricks, and dotnet needs winetricks. tages is DRM
+# and refuses to install
+DEFAULT_BLACKLIST = r'directx|dxsetup|vcredist|msvc|amdcpu|tages'
 DEFAULT_WINETRICKS_MAP = r'dotnet.*3\.?5:dotnet35;dotnet.*4\.?0:dotnet40;dotnet.*4\.?5:dotnet45;dotnet.*2\.?0:dotnet20'
 WINETRICKS_BROKEN_64 = 'dotnet35'
 
@@ -88,7 +86,8 @@ class ProcessError(Exception):
 @click.option('-d/-D', '--use-installdir/--no-use-installdir', help='Specify an installdir rather than an appmanifest. In this case all .vdf files in the installdir are processed.')
 @click.argument('appmanifest', nargs=1, required=True)
 def cmd_run_installscripts(appmanifest, blacklist, tricks, use_installdir):
-    cfgfile = Path.home / '.config' / Path(__file__).name + '.toml'
+    cfgfile = Path.home() / '.config' / Path(__file__).name
+    cfgfile = cfgfile.with_suffix('.toml')
     if cfgfile.exists():
         with open(cfgfile, 'r') as f:
             config = toml.load(f)
@@ -218,7 +217,9 @@ def run(cmd, **kwargs):
     # click.echo(f'Running command: {strcmd}')
     try:
         result = subprocess.run(cmd, **kwargs)
-        result.stderr.seek(0)
+        if result.stderr:
+            result.stderr.seek(0)
+        return result
     except subprocess.CalledProcessError as exc:
         stderr.seek(0)
         exc.stderr = stderr.read()
@@ -308,9 +309,16 @@ def runprocess(rp, installdir, context, blacklist, tricks):
         should_run = True
         hasrunkey = entry.escaped_get('hasrunkey', context)
         if hasrunkey:
+            runvalue = entry.iget('minimumhasrunvalue') or '1'
             proc = wine(['reg', 'query', hasrunkey, '/v', key], check=False)
             if proc.returncode == 0:
-                should_run = False
+                if proc.stdout:
+                    lines = proc.stdout.read().decode('utf-8')
+                    if len(lines) > 1:
+                        curvalue = lines[1].split()[2]
+                        if int(curvalue) >= int(runvalue):
+                            should_run = False
+
             if blacklist and blacklist.search(hasrunkey):
                 click.echo(
                     f'Skipping blacklisted runprocess {key} for {hasrunkey}')
@@ -367,7 +375,6 @@ def runprocess(rp, installdir, context, blacklist, tricks):
                             raise
 
             if hasrunkey:
-                runvalue = entry.iget('minimumhasrunvalue') or '1'
                 wine(['reg', 'delete', hasrunkey, '/v', key, '/f'], check=False)
                 wine(['reg', 'add', hasrunkey, '/v', key,
                       '/t', 'REG_DWORD', '/d', runvalue, '/f'])
