@@ -184,7 +184,7 @@ case "$OSTYPE" in
 esac
 
 scriptdir="$(cd "$(dirname "$0")" && pwd -P)"
-PATH="$scriptdir/dist:$scriptdir:$PATH"
+PATH="$scriptdir:$PATH"
 if [ -z "$proton_script_path" ]; then
     if proton_script_path="$(which proton 2>/dev/null)" && [ ! -e "${proton_script_path%/*}/LICENSE.proton" ]; then
         protondir="$(dirname "$proton_script_path")"
